@@ -1,0 +1,127 @@
+{
+  "entities": {
+    "Krathong": {
+      "title": "Krathong",
+      "description": "A customized romantic Loy Krathong floating on the virtual river with wishes, love note, optional memory image, and heart count.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Document ID matching ^[a-zA-Z0-9_-]+$",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "boardId": {
+          "type": "string",
+          "description": "Shared river board or couple room ID",
+          "minLength": 3,
+          "maxLength": 64,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "toName": {
+          "type": "string",
+          "description": "Recipient name (partner/special person)",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "fromName": {
+          "type": "string",
+          "description": "Sender name",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "krathongStyle": {
+          "type": "string",
+          "description": "Selected krathong base design style",
+          "enum": ["banana-leaf", "pink-lotus", "sweet-macaron", "golden-royal"]
+        },
+        "flowerColor": {
+          "type": "string",
+          "description": "Selected flower and decoration color palette",
+          "enum": ["pastel-pink", "marigold-gold", "lavender-mist", "ivory-jasmine", "coral-rose"]
+        },
+        "candleColor": {
+          "type": "string",
+          "description": "Selected candlelight and incense glow color",
+          "enum": ["warm-gold", "rose-pink", "moonlight-blue", "peach-amber"]
+        },
+        "wishText": {
+          "type": "string",
+          "description": "Loy Krathong wish text",
+          "minLength": 1,
+          "maxLength": 400
+        },
+        "loveNote": {
+          "type": "string",
+          "description": "Romantic love note to partner",
+          "minLength": 0,
+          "maxLength": 600
+        },
+        "imageData": {
+          "type": "string",
+          "description": "Optional compressed base64 data URI or https URL of a couple memory photo",
+          "minLength": 0,
+          "maxLength": 250000
+        },
+        "heartsCount": {
+          "type": "integer",
+          "description": "Number of hearts sent to this krathong (starts at 0, incremented atomically by 1)"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp when the krathong was floated"
+        }
+      },
+      "required": [
+        "id",
+        "boardId",
+        "toName",
+        "fromName",
+        "krathongStyle",
+        "flowerColor",
+        "candleColor",
+        "wishText",
+        "loveNote",
+        "imageData",
+        "heartsCount",
+        "createdAt"
+      ]
+    },
+    "AdminUser": {
+      "title": "AdminUser",
+      "description": "Authorized administrator record keyed by Firebase Auth UID for moderating krathongs.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID",
+          "minLength": 4,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "role": {
+          "type": "string",
+          "description": "Administrator role",
+          "enum": ["admin"]
+        }
+      },
+      "required": ["uid", "role"]
+    }
+  },
+  "firestore": {
+    "/krathongs/{krathongId}": {
+      "schema": {
+        "$ref": "#/entities/Krathong"
+      },
+      "description": "Collection of customized Loy Krathong wishes and love notes shared on the floating river board."
+    },
+    "/admins/{adminId}": {
+      "schema": {
+        "$ref": "#/entities/AdminUser"
+      },
+      "description": "Admin role lookup collection for Firebase Auth UID moderation permissions."
+    }
+  }
+}

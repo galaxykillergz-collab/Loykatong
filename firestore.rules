@@ -1,0 +1,148 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Global safety net: default deny everything
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 4 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isValidBoardId(boardId) {
+      return boardId is string && boardId.size() >= 3 && boardId.size() <= 64 && boardId.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+        && (
+          exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+          || (
+            request.auth.token.email == 'galaxykillergz@gmail.com'
+            && request.auth.token.email_verified == true
+          )
+        );
+    }
+
+    function isValidKrathongStyle(style) {
+      return style in ['banana-leaf', 'pink-lotus', 'sweet-macaron', 'golden-royal'];
+    }
+
+    function isValidFlowerColor(color) {
+      return color in ['pastel-pink', 'marigold-gold', 'lavender-mist', 'ivory-jasmine', 'coral-rose'];
+    }
+
+    function isValidCandleColor(color) {
+      return color in ['warm-gold', 'rose-pink', 'moonlight-blue', 'peach-amber'];
+    }
+
+    function isValidImageData(img) {
+      return img is string
+        && img.size() <= 250000
+        && (
+          img == ''
+          || (img.size() >= 8 && img[0:8] == 'https://')
+          || (
+            img.size() >= 11
+            && img[0:11] == 'data:image/'
+            && !(img.size() >= 14 && img[0:14] == 'data:image/svg')
+          )
+        );
+    }
+
+    function isValidKrathong(data, krathongId) {
+      return data.keys().hasAll([
+          'id',
+          'boardId',
+          'toName',
+          'fromName',
+          'krathongStyle',
+          'flowerColor',
+          'candleColor',
+          'wishText',
+          'loveNote',
+          'imageData',
+          'heartsCount',
+          'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'id',
+          'boardId',
+          'toName',
+          'fromName',
+          'krathongStyle',
+          'flowerColor',
+          'candleColor',
+          'wishText',
+          'loveNote',
+          'imageData',
+          'heartsCount',
+          'createdAt'
+        ])
+        && data.id is string
+        && data.id == krathongId
+        && isValidBoardId(data.boardId)
+        && data.toName is string
+        && data.toName.size() >= 1
+        && data.toName.size() <= 60
+        && data.fromName is string
+        && data.fromName.size() >= 1
+        && data.fromName.size() <= 60
+        && data.krathongStyle is string
+        && isValidKrathongStyle(data.krathongStyle)
+        && data.flowerColor is string
+        && isValidFlowerColor(data.flowerColor)
+        && data.candleColor is string
+        && isValidCandleColor(data.candleColor)
+        && data.wishText is string
+        && data.wishText.size() >= 1
+        && data.wishText.size() <= 400
+        && data.loveNote is string
+        && data.loveNote.size() <= 600
+        && isValidImageData(data.imageData)
+        && data.heartsCount is int
+        && data.heartsCount >= 0
+        && data.createdAt is timestamp;
+    }
+
+    match /admins/{adminId} {
+      allow get: if isValidId(adminId) && isSignedIn() && request.auth.uid == adminId;
+      allow list: if false;
+      allow create, update, delete: if false;
+    }
+
+    match /krathongs/{krathongId} {
+      allow get: if isValidId(krathongId) && existing().id == krathongId;
+      allow list: if existing().boardId is string;
+
+      allow create: if isValidId(krathongId)
+        && isValidKrathong(incoming(), krathongId)
+        && incoming().heartsCount == 0
+        && incoming().createdAt == request.time;
+
+      allow update: if isValidId(krathongId)
+        && isValidKrathong(incoming(), krathongId)
+        && incoming().diff(existing()).affectedKeys().hasOnly(['heartsCount'])
+        && incoming().id == existing().id
+        && incoming().boardId == existing().boardId
+        && incoming().createdAt == existing().createdAt
+        && incoming().heartsCount == existing().heartsCount + 1;
+
+      allow delete: if isValidId(krathongId) && isAdmin();
+    }
+  }
+}
