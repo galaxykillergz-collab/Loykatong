@@ -88,6 +88,13 @@ export const NightRiverCanvas: React.FC<NightRiverCanvasProps> = ({
   const [tickOffset, setTickOffset] = useState(0);
   const rafRef = useRef<number | null>(null);
   const lastTimeRef = useRef<number>(0);
+  const launchOriginRef = useRef<{ id: string; startTick: number } | null>(null);
+
+  useEffect(() => {
+    if (newlyLaunchedId) {
+      launchOriginRef.current = { id: newlyLaunchedId, startTick: tickOffset };
+    }
+  }, [newlyLaunchedId]);
 
   // Smooth gentle horizontal drift along the river using requestAnimationFrame
   useEffect(() => {
@@ -101,7 +108,7 @@ export const NightRiverCanvas: React.FC<NightRiverCanvasProps> = ({
       const dt = Math.min((time - lastTimeRef.current) / 1000, 0.1);
       lastTimeRef.current = time;
       if (!isPaused) {
-        setTickOffset((prev) => (prev + dt * 1.6) % 10000);
+        setTickOffset((prev) => (prev + dt * 5.2) % 10000);
       }
       rafRef.current = requestAnimationFrame(animate);
     };
@@ -120,7 +127,7 @@ export const NightRiverCanvas: React.FC<NightRiverCanvasProps> = ({
       const lane = idx % 3; // 0 = far, 1 = mid, 2 = near
       const spacing = 100 / Math.max(Math.min(visibleKrathongs.length, 6), 3);
       const basePercent = ((idx * spacing * 1.15) + lane * 14) % 92;
-      const speed = lane === 0 ? 0.65 : lane === 1 ? 0.95 : 1.2;
+      const speed = lane === 0 ? 0.8 : lane === 1 ? 1.05 : 1.35;
       const scale = lane === 0 ? 0.78 : lane === 1 ? 0.92 : 1.04;
       map.set(k.id, { lane, basePercent, speed, scale });
     });
@@ -385,10 +392,14 @@ export const NightRiverCanvas: React.FC<NightRiverCanvasProps> = ({
             if (!pos) return null;
 
             const isNew = krathong.id === newlyLaunchedId;
-            // Center newly launched krathong prominently on arrival, otherwise drift horizontally
-            const xPercent = isNew
-              ? 46
-              : ((pos.basePercent + tickOffset * pos.speed) % 108) - 8;
+            const xPercent =
+              isNew && launchOriginRef.current?.id === krathong.id
+                ? ((18 +
+                    Math.max(0, tickOffset - launchOriginRef.current.startTick) *
+                      pos.speed) %
+                    108) -
+                  8
+                : ((pos.basePercent + tickOffset * pos.speed) % 108) - 8;
 
             const topPercent =
               pos.lane === 0 ? 12 : pos.lane === 1 ? 37 : 63;

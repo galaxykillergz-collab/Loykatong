@@ -8,6 +8,8 @@ import {
   LogIn,
   LogOut,
   ShieldCheck,
+  Copy,
+  ExternalLink,
 } from 'lucide-react';
 import { ErrorBoundary } from '@/src/components/ErrorBoundary';
 import { LovePostcardSection } from '@/src/components/LovePostcardSection';
@@ -116,6 +118,7 @@ function AppContent() {
   const [isFirebaseAdmin, setIsFirebaseAdmin] = useState(false);
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
+  const [isUnauthorizedDomain, setIsUnauthorizedDomain] = useState(false);
 
   const [draft, setDraft] = useState<KrathongDraft>(INITIAL_DRAFT);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -258,6 +261,7 @@ function AppContent() {
 
   const handleSignInGoogle = async () => {
     setAuthError(null);
+    setIsUnauthorizedDomain(false);
     setAuthLoading(true);
     try {
       const user = await signInWithGoogle();
@@ -285,6 +289,7 @@ function AppContent() {
       } else if (rawMsg.includes('popup-blocked')) {
         message = 'เบราว์เซอร์บล็อกหน้าต่างป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บนี้แล้วกดลองใหม่';
       } else if (rawMsg.includes('unauthorized-domain')) {
+        setIsUnauthorizedDomain(true);
         message = 'โดเมนนี้ยังไม่ได้รับอนุญาตใน Firebase Auth (Authorized Domains)';
       } else if (rawMsg.includes('operation-not-allowed')) {
         message = 'ยังไม่ได้เปิดใช้งาน Google Sign-In ใน Firebase Authentication Console';
@@ -467,6 +472,58 @@ function AppContent() {
           </div>
         </div>
       </header>
+
+      {/* Authorized Domain Setup Helper Banner */}
+      {isUnauthorizedDomain && (
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="rounded-2xl bg-[#1F274D] border border-[#F6C56E]/50 p-4 sm:p-5 space-y-3 text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-display font-semibold text-[#FDE68A]">
+                วิธีเพิ่มโดเมนนี้ใน Firebase Auth เพื่อเปิดใช้เข้าสู่ระบบ Google
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsUnauthorizedDomain(false)}
+                className="text-xs text-[#CBD5E1] hover:text-white underline"
+              >
+                ปิดคำแนะนำ
+              </button>
+            </div>
+            <p className="text-[#E2E8F0] leading-relaxed">
+              1. เปิด{' '}
+              <a
+                href="https://console.firebase.google.com/project/exalted-welder-xdrm3/authentication/settings"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[#FDE68A] underline underline-offset-4 font-medium"
+              >
+                <span>Firebase Console → Authentication → Settings → Authorized domains</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+              <br />
+              2. กด <strong>Add domain</strong> แล้ววางชื่อโดเมนปัจจุบันนี้:
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <code className="px-3 py-2 rounded-xl bg-[#0B1024] border border-white/15 text-[#FDE68A] text-xs break-all">
+                {typeof window !== 'undefined' ? window.location.hostname : ''}
+              </code>
+              <button
+                type="button"
+                onClick={() => {
+                  const host = window.location.hostname;
+                  void copyTextSafe(host).then((ok) => {
+                    if (ok) showToast(`คัดลอกโดเมน ${host} แล้ว`);
+                  });
+                }}
+                className="min-h-[40px] inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#F6C56E] text-[#0B1024] font-medium text-xs whitespace-nowrap"
+              >
+                <Copy className="w-3.5 h-3.5" />
+                <span>คัดลอกชื่อโดเมน</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Friendly Connection Fallback Banner (only when an actual Firestore error occurs) */}
       {loadError && (

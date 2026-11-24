@@ -1,6 +1,10 @@
-import React, { useEffect } from 'react';
-import { X, CheckCircle2, Info } from 'lucide-react';
-import { firebaseConfig, isFirebaseConfigured } from '@/src/firebase/config';
+import React, { useEffect, useState } from 'react';
+import { X, CheckCircle2, Info, RefreshCw } from 'lucide-react';
+import {
+  firebaseConfig,
+  isFirebaseConfigured,
+  testConnection,
+} from '@/src/firebase/config';
 import type { StorageMode } from '@/src/services/krathongService';
 
 interface FirebaseGuideModalProps {
@@ -16,14 +20,31 @@ export const FirebaseGuideModal: React.FC<FirebaseGuideModalProps> = ({
   onChangeMode,
   onClose,
 }) => {
+  const [testingConn, setTestingConn] = useState(false);
+  const [connResult, setConnResult] = useState<'idle' | 'ok' | 'fail'>('idle');
+
   useEffect(() => {
     if (!isOpen) return;
+    setConnResult('idle');
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose();
     };
     window.addEventListener('keydown', handleKey);
     return () => window.removeEventListener('keydown', handleKey);
   }, [isOpen, onClose]);
+
+  const handleTestConnection = async () => {
+    setTestingConn(true);
+    setConnResult('idle');
+    try {
+      const ok = await testConnection();
+      setConnResult(ok ? 'ok' : 'fail');
+    } catch {
+      setConnResult('fail');
+    } finally {
+      setTestingConn(false);
+    }
+  };
 
   if (!isOpen) return null;
 
@@ -61,25 +82,60 @@ export const FirebaseGuideModal: React.FC<FirebaseGuideModalProps> = ({
           </button>
         </div>
 
-        {/* Mode Switcher */}
+        {/* Mode Switcher & Connection Details */}
         <div className="rounded-2xl bg-[#0D142E] border border-white/10 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {isFirebaseConfigured ? (
-              <>
-                <CheckCircle2 className="w-4 h-4 text-[#6EE7B7] shrink-0" />
-                <span className="text-[#6EE7B7]">
-                  ตรวจพบการตั้งค่า Firebase Project ({firebaseConfig.projectId}) แล้ว
-                </span>
-              </>
-            ) : (
-              <>
-                <Info className="w-4 h-4 text-[#FDE68A] shrink-0" />
-                <span className="text-[#FDE68A]">
-                  ยังไม่ได้ตั้งค่า Firebase จริง — กำลังใช้โหมดตัวอย่าง (Local Storage)
-                </span>
-              </>
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-sm font-medium">
+              {isFirebaseConfigured ? (
+                <>
+                  <CheckCircle2 className="w-4 h-4 text-[#6EE7B7] shrink-0" />
+                  <span className="text-[#6EE7B7]">
+                    เชื่อมต่อ Firebase Project ({firebaseConfig.projectId}) แล้ว
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Info className="w-4 h-4 text-[#FDE68A] shrink-0" />
+                  <span className="text-[#FDE68A]">
+                    ยังไม่ได้ตั้งค่า Firebase จริง — กำลังใช้โหมดตัวอย่าง (Local Storage)
+                  </span>
+                </>
+              )}
+            </div>
+
+            {isFirebaseConfigured && (
+              <button
+                type="button"
+                disabled={testingConn}
+                onClick={() => void handleTestConnection()}
+                className="min-h-[36px] inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/15 text-xs text-[#FFF8F0] transition-colors disabled:opacity-60"
+              >
+                <RefreshCw className={`w-3.5 h-3.5 ${testingConn ? 'animate-spin' : ''}`} />
+                <span>{testingConn ? 'กำลังทดสอบ...' : 'ทดสอบการเชื่อมต่อ'}</span>
+              </button>
             )}
           </div>
+
+          {isFirebaseConfigured && (
+            <div className="text-xs text-[#94A3B8] space-y-0.5">
+              <p>
+                Firestore Database ID:{' '}
+                <code className="text-[#E2E8F0]">
+                  {firebaseConfig.firestoreDatabaseId || '(default)'}
+                </code>
+              </p>
+              {connResult === 'ok' && (
+                <p className="text-[#6EE7B7]">
+                  ผลการทดสอบ: เชื่อมต่อเซิร์ฟเวอร์ Firestore สำเร็จ
+                </p>
+              )}
+              {connResult === 'fail' && (
+                <p className="text-[#FCA5A5]">
+                  ผลการทดสอบ: ไม่สามารถติดต่อ Firestore ได้ (กรุณาตรวจสอบอินเทอร์เน็ตหรือการตั้งค่า)
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="flex flex-wrap gap-2">
             <button
